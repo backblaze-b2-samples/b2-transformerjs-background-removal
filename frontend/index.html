@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B2 + Transformers.js Background Removal</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🖼️</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1000px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .upload-zone {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-zone:hover {
+            border-color: #764ba2;
+            background: #f8f9ff;
+        }
+
+        .upload-zone.dragover {
+            background: #f0f0ff;
+            border-color: #764ba2;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 5px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.error {
+            background: #fff5f5;
+            border-left-color: #e53e3e;
+        }
+
+        .status.success {
+            background: #f0fff4;
+            border-left-color: #38a169;
+        }
+
+        .progress {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .preview-box {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .preview-box h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .preview-box img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .preview-box canvas {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background:
+                repeating-conic-gradient(#e0e0e0 0% 25%, transparent 0% 50%)
+                50% / 20px 20px;
+        }
+
+        .result {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .links a {
+            color: #667eea;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 1px solid #667eea;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        .links a:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .preview-grid {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ B2 + Transformers.js Background Removal</h1>
+        <p class="subtitle">Client-side AI Image Background Removal using Transformers.js + Backblaze B2</p>
+
+        <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin-bottom: 25px; border-radius: 5px;">
+            <p style="margin: 0; line-height: 1.6; color: #555; font-size: 0.95em;">
+                <strong>🚀 What this demonstrates:</strong><br>
+                • <strong>Transformers.js</strong> - Run MODNET background removal AI entirely in your browser (no server GPU needed)<br>
+                • <strong>Client-side Inference</strong> - All AI processing happens locally in your browser for privacy<br>
+                • <strong>Backblaze B2</strong> - Cost-effective cloud storage at $6/TB/month with S3-compatible API<br>
+                • <strong>Pre-signed URLs</strong> - Secure direct browser-to-cloud uploads without exposing credentials<br>
+                <br>
+                Everything runs client-side. Your images never touch our server.
+            </p>
+        </div>
+
+        <div class="upload-zone" id="uploadZone">
+            <div style="font-size: 3em; margin-bottom: 10px;">🖼️</div>
+            <h3>Drop image here or click to browse</h3>
+            <p style="color: #999; margin-top: 10px;">Supports: JPG, PNG, WEBP</p>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+
+        <div style="text-align: center;">
+            <button id="removeBackgroundBtn" disabled>Remove Background with MODNET</button>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="progress" id="progressContainer" style="display: none;">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="result" id="result">
+            <div class="preview-grid">
+                <div class="preview-box">
+                    <h3>📷 Original Image</h3>
+                    <img id="originalImage" src="" alt="Original">
+                </div>
+                <div class="preview-box">
+                    <h3>✨ Background Removed</h3>
+                    <canvas id="outputCanvas"></canvas>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                <p style="margin-bottom: 10px; font-weight: 600; color: #555;">📦 Files stored in Backblaze B2:</p>
+                <div class="links">
+                    <a id="originalLink" target="_blank" style="flex: 1; text-align: center;">🖼️ View Original Image</a>
+                    <a id="cutoutLink" target="_blank" style="flex: 1; text-align: center;">✨ View Background-Removed Image</a>
+                </div>
+                <p style="margin-top: 10px; font-size: 0.85em; color: #999;">
+                    Click links above to access your files (pre-signed URLs valid for 1 hour)
+                </p>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #f0f0f0; text-align: center;">
+            <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">
+                <strong>Learn more:</strong>
+            </p>
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <a href="https://huggingface.co/docs/transformers.js" target="_blank" style="color: #667eea; text-decoration: none; font-size: 0.9em;">
+                    📚 Transformers.js Docs
+                </a>
+                <a href="https://www.backblaze.com/b2/cloud-storage.html" target="_blank" style="color: #667eea; text-decoration: none; font-size: 0.9em;">
+                    ☁️ Backblaze B2 Storage
+                </a>
+                <a href="https://github.com/xenova/transformers.js" target="_blank" style="color: #667eea; text-decoration: none; font-size: 0.9em;">
+                    💻 Transformers.js GitHub
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { AutoModel, AutoProcessor, RawImage } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.2';
+
+        let selectedFile = null;
+        let originalImageUrl = null;
+        let fileId = null;
+        let model = null;
+        let processor = null;
+        let processedImageBlob = null;
+
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const removeBackgroundBtn = document.getElementById('removeBackgroundBtn');
+        const status = document.getElementById('status');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const result = document.getElementById('result');
+        const originalImage = document.getElementById('originalImage');
+        const outputCanvas = document.getElementById('outputCanvas');
+
+        // API is served from same origin
+        const API_BASE = window.location.origin;
+
+        function showStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = 'status show ' + type;
+        }
+
+        function setProgress(percent) {
+            progressContainer.style.display = 'block';
+            progressBar.style.width = percent + '%';
+        }
+
+        function hideProgress() {
+            progressContainer.style.display = 'none';
+        }
+
+        // File upload handling
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        async function handleFileSelect(file) {
+            if (!file.type.startsWith('image/')) {
+                showStatus('Please select an image file', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            showStatus(`Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'success');
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                originalImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            // Upload to B2 immediately
+            await uploadToB2();
+        }
+
+        async function uploadToB2() {
+            try {
+                showStatus('Uploading image to B2...', 'info');
+                setProgress(10);
+
+                // Get pre-signed URL for image
+                const response = await fetch(`${API_BASE}/api/presign-image`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: selectedFile.name,
+                        contentType: selectedFile.type
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to get pre-signed URL');
+                }
+
+                const { uploadUrl, publicUrl, fileId: id } = await response.json();
+                fileId = id;
+
+                setProgress(30);
+
+                // Upload image to B2
+                const uploadResponse = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': selectedFile.type },
+                    body: selectedFile
+                });
+
+                if (!uploadResponse.ok) {
+                    throw new Error('Failed to upload image to B2');
+                }
+
+                originalImageUrl = publicUrl;
+                setProgress(50);
+                showStatus('Image uploaded to B2 successfully!', 'success');
+                hideProgress();
+                removeBackgroundBtn.disabled = false;
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                showStatus('Error uploading to B2: ' + error.message, 'error');
+                hideProgress();
+            }
+        }
+
+        removeBackgroundBtn.addEventListener('click', async () => {
+            try {
+                removeBackgroundBtn.disabled = true;
+                result.classList.remove('show');
+                showStatus('Loading MODNET model (first time may take a minute)...', 'info');
+                setProgress(60);
+
+                // Load MODNET model for background removal
+                if (!model) {
+                    model = await AutoModel.from_pretrained('briaai/RMBG-1.4', {
+                        device: 'webgpu',
+                    });
+                    processor = await AutoProcessor.from_pretrained('briaai/RMBG-1.4');
+                }
+
+                setProgress(70);
+                showStatus('Processing image with MODNET (removing background)...', 'info');
+
+                // Load and process image
+                const image = await RawImage.fromURL(originalImage.src);
+                const { pixel_values } = await processor(image);
+
+                // Predict alpha matte
+                const { output } = await model({ input: pixel_values });
+
+                // Post-process the mask
+                const maskData = output.data;
+                const [batch, channels, height, width] = output.dims;
+
+                // Resize mask to original image dimensions
+                const canvas = outputCanvas;
+                canvas.width = image.width;
+                canvas.height = image.height;
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+                // Draw original image
+                ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+
+                // Apply mask
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+
+                for (let i = 0; i < canvas.height; i++) {
+                    for (let j = 0; j < canvas.width; j++) {
+                        const maskX = Math.floor((j / canvas.width) * width);
+                        const maskY = Math.floor((i / canvas.height) * height);
+                        const maskIdx = maskY * width + maskX;
+
+                        const pixelIdx = (i * canvas.width + j) * 4;
+                        data[pixelIdx + 3] = maskData[maskIdx] * 255; // Set alpha channel
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+
+                setProgress(90);
+                showStatus('Saving processed image to B2...', 'info');
+
+                // Convert canvas to blob
+                processedImageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+                // Get pre-signed URL for cutout
+                const presignResponse = await fetch(`${API_BASE}/api/presign-cutout`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fileId })
+                });
+
+                if (!presignResponse.ok) {
+                    throw new Error('Failed to get cutout pre-signed URL');
+                }
+
+                const { uploadUrl: cutoutUploadUrl, publicUrl: cutoutPublicUrl } = await presignResponse.json();
+
+                // Upload cutout to B2
+                const cutoutUploadResponse = await fetch(cutoutUploadUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'image/png' },
+                    body: processedImageBlob
+                });
+
+                if (!cutoutUploadResponse.ok) {
+                    throw new Error('Failed to upload cutout to B2');
+                }
+
+                setProgress(100);
+                showStatus('Background removal complete!', 'success');
+
+                // Display results
+                document.getElementById('originalLink').href = originalImageUrl;
+                document.getElementById('cutoutLink').href = cutoutPublicUrl;
+                result.classList.add('show');
+
+                hideProgress();
+                removeBackgroundBtn.disabled = false;
+
+            } catch (error) {
+                console.error('Background removal error:', error);
+                showStatus('Error during background removal: ' + error.message, 'error');
+                hideProgress();
+                removeBackgroundBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
