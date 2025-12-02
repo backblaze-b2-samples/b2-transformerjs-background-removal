@@ -1,6 +1,6 @@
 # 🖼️ B2 + Transformers.js Background Removal
 
-**Client-side AI Image Background Removal** using [Transformers.js](https://huggingface.co/docs/transformers.js) and [Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html) cloud storage.
+**Client-side AI Image Background Removal** using [Transformers.js](https://huggingface.co/docs/transformers.js) and [Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples) cloud storage.
 
 Run **RMBG-1.4** (Remove Background Model) **inference** entirely in your browser - no server GPU needed, with images and processed results stored in cost-effective B2 storage.
 
@@ -8,7 +8,7 @@ Run **RMBG-1.4** (Remove Background Model) **inference** entirely in your browse
 
 - **[Transformers.js](https://huggingface.co/docs/transformers.js)** - Run AI models in the browser with WebAssembly and WebGPU
 - **[RMBG-1.4](https://huggingface.co/briaai/RMBG-1.4)** - State-of-the-art **background removal model** for **image segmentation**
-- **[Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html)** - S3-compatible cloud storage at $6/TB/month
+- **[Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)** - S3-compatible cloud storage at $6/TB/month
 - **Client-side Inference** - All AI processing happens locally in the browser
 
 ## ✨ What This Demonstrates
@@ -58,7 +58,7 @@ Perfect for demonstrating **browser-based image inference** for:
 ### Prerequisites
 
 - **Node.js 18+**
-- **[Backblaze B2 Account](https://www.backblaze.com/sign-up/cloud-storage)** (free tier available)
+- **[Backblaze B2 Account](https://www.backblaze.com/sign-up/cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)** (free tier available)
   - Create a bucket
   - Generate an Application Key with `readFiles`, `writeFiles`, `writeBuckets` permissions
 
@@ -76,7 +76,7 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env` with your [B2 credentials](https://www.backblaze.com/b2/docs/quick_account.html):
+Edit `.env` with your [B2 credentials](https://www.backblaze.com/b2/docs/quick_account.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples):
 
 ```env
 B2_ENDPOINT=https://s3.us-west-002.backblazeb2.com
@@ -86,7 +86,7 @@ B2_APP_KEY=your_app_key_here
 B2_BUCKET=your-bucket-name
 ```
 
-> Get your B2 endpoint and region from your [bucket details page](https://secure.backblaze.com/b2_buckets.htm)
+> Get your B2 endpoint and region from your [bucket details page](https://secure.backblaze.com/b2_buckets.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)
 
 ### 3. Start the App
 
@@ -141,10 +141,10 @@ const { output } = await model({ input: pixel_values });
 
 ### Storage
 
-- **Provider**: [Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html)
+- **Provider**: [Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)
 - **API**: S3-compatible API with pre-signed URLs
 - **Pricing**: $6/TB/month storage, uploads are FREE
-- **Documentation**: [B2 S3-Compatible API Docs](https://www.backblaze.com/b2/docs/s3_compatible_api.html)
+- **Documentation**: [B2 S3-Compatible API Docs](https://www.backblaze.com/b2/docs/s3_compatible_api.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)
 
 ### Supported Image Formats
 
@@ -190,7 +190,7 @@ b2 update-bucket --cors-rules '[
 ```
 
 **Alternative - B2 Web Console**:
-1. Go to https://secure.backblaze.com/b2_buckets.htm
+1. Go to [https://secure.backblaze.com/b2_buckets.htm](https://secure.backblaze.com/b2_buckets.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)
 2. Click your bucket → Bucket Settings → CORS Rules
 3. Add the rules shown above
 
@@ -288,8 +288,8 @@ CMD ["node", "server.js"]
 - **[Transformers.js Documentation](https://huggingface.co/docs/transformers.js)** - Run AI models in the browser
 - **[Transformers.js GitHub](https://github.com/xenova/transformers.js)** - Source code and examples
 - **[RMBG-1.4 Model Card](https://huggingface.co/briaai/RMBG-1.4)** - Background removal model details
-- **[Backblaze B2 Documentation](https://www.backblaze.com/b2/docs/)** - Cloud storage API docs
-- **[B2 S3-Compatible API](https://www.backblaze.com/b2/docs/s3_compatible_api.html)** - S3 compatibility guide
+- **[Backblaze B2 Documentation](https://www.backblaze.com/b2/docs/?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)** - Cloud storage API docs
+- **[B2 S3-Compatible API](https://www.backblaze.com/b2/docs/s3_compatible_api.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)** - S3 compatibility guide
 - **[WebGPU Guide](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API)** - Browser GPU acceleration
 
 ## Keywords
