@@ -391,7 +391,10 @@
                 // Upload image to B2
                 const uploadResponse = await fetch(uploadUrl, {
                     method: 'PUT',
-                    headers: { 'Content-Type': selectedFile.type },
+                    headers: {
+                        "Content-Type": selectedFile.type,
+                        "User-Agent": "b2ai-transformersjs",
+                    },
                     body: selectedFile
                 });
 
@@ -489,7 +492,10 @@
                 // Upload cutout to B2
                 const cutoutUploadResponse = await fetch(cutoutUploadUrl, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'image/png' },
+                    headers: {
+                        "Content-Type": "image/png",
+                        "User-Agent": "b2ai-transformersjs",
+                    },
                     body: processedImageBlob
                 });
 

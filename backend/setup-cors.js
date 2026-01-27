@@ -32,6 +32,7 @@ export async function setupCORS(silent = false) {
       secretAccessKey: process.env.B2_APP_KEY,
     },
     forcePathStyle: true,
+    customUserAgent: "b2ai-transformersjs",
   });
 
   const BUCKET = process.env.B2_BUCKET;

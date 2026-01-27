@@ -28,6 +28,7 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.B2_APP_KEY,
   },
   forcePathStyle: true,
+  customUserAgent: "b2ai-transformersjs",
 });
 
 const BUCKET = process.env.B2_BUCKET;
