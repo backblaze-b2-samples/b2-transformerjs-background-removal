@@ -1,4 +1,4 @@
-# 🖼️ B2 + Transformers.js Background Removal
+# 🖼️ B2 + Transformers.js Background Removal Example
 
 **Client-side AI Image Background Removal** using [Transformers.js](https://huggingface.co/docs/transformers.js) and [Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples) cloud storage.
 
