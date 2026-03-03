@@ -1,23 +1,29 @@
-# 🖼️ B2 + Transformers.js Background Removal Example
+# AI Image Background Removal in the Browser with RMBG-1.4, Transformers.js, and Backblaze B2
 
-**Client-side AI Image Background Removal** using [Transformers.js](https://huggingface.co/docs/transformers.js) and [Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples) cloud storage.
+A JavaScript example app that removes image backgrounds entirely in the browser using the [RMBG-1.4](https://huggingface.co/briaai/RMBG-1.4) image segmentation model and [Transformers.js](https://huggingface.co/docs/transformers.js) — no server GPU or cloud inference API required. Original images and transparent PNG cutouts are stored in [Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples) cloud storage.
 
-Run **RMBG-1.4** (Remove Background Model) **inference** entirely in your browser - no server GPU needed, with images and processed results stored in cost-effective B2 storage.
+Upload a photo (JPG, PNG, WEBP, GIF, BMP), remove its background client-side with one click, and save both the original and the transparent cutout to S3-compatible Backblaze B2 object storage. Inference runs via WebGPU with an automatic WebAssembly (WASM) fallback.
 
-## 🚀 Technologies
+## Why Client-Side Background Removal?
 
-- **[Transformers.js](https://huggingface.co/docs/transformers.js)** - Run AI models in the browser with WebAssembly and WebGPU
-- **[RMBG-1.4](https://huggingface.co/briaai/RMBG-1.4)** - State-of-the-art **background removal model** for **image segmentation**
-- **[Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)** - S3-compatible cloud storage at $6/TB/month
-- **Client-side Inference** - All AI processing happens locally in the browser
+- **No GPU server costs** — the RMBG-1.4 model runs in your browser via WebGPU/WASM, so there's no inference server to pay for
+- **Privacy** — images never leave the user's device for processing
+- **No API rate limits** — process as many images as you want, completely offline after the model loads
+- **Simple to deploy** — a static frontend + a lightweight Node.js backend for pre-signed URLs is all you need
 
-## ✨ What This Demonstrates
+## Technologies
 
-- **Client-side AI Inference**: Run RMBG-1.4 **background removal** model entirely in browser (no server GPU required)
-- **Transformers.js Image Processing**: Real-time **image background removal** using **browser-based inference**
-- **Cost-effective Storage**: Store original images and background-removed cutouts in Backblaze B2
-- **Secure Uploads**: Direct browser-to-cloud uploads with pre-signed URLs
-- **Simple Architecture**: Complete flow from upload → process → store
+- **[Transformers.js](https://huggingface.co/docs/transformers.js)** — Run Hugging Face AI models in the browser with WebGPU and WebAssembly
+- **[RMBG-1.4](https://huggingface.co/briaai/RMBG-1.4)** — State-of-the-art background removal model for image segmentation by BRIA AI
+- **[Backblaze B2](https://www.backblaze.com/b2/cloud-storage.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)** — S3-compatible cloud object storage at $6/TB/month
+
+## What This Demonstrates
+
+- **Client-side AI image segmentation**: Run RMBG-1.4 background removal entirely in the browser — no server GPU required
+- **WebGPU-accelerated inference**: Hardware-accelerated ML inference with automatic WASM fallback
+- **Cost-effective cloud storage**: Store original images and transparent PNG cutouts in Backblaze B2
+- **Secure direct uploads**: Browser-to-cloud uploads using S3 pre-signed URLs
+- **Simple architecture**: End-to-end flow from upload → remove background → store
 
 ![Remove Background UI](./remove-background-ui.png)
 
@@ -42,18 +48,15 @@ Browser RMBG-1.4 Inference (Transformers.js) → Remove Background
 7. Backend generates pre-signed PUT URL for processed image
 8. Browser uploads background-removed cutout to B2
 
-## 🎯 Use Cases
+## Use Cases
 
-Perfect for demonstrating **browser-based image inference** for:
+- **E-commerce product photos** — Remove backgrounds from product images for clean listings
+- **Profile pictures** — Automatic portrait cutouts for avatars and headshots
+- **Design and marketing** — Create transparent PNG assets without Photoshop or paid APIs
+- **Real estate** — Clean up property photos for listings
+- **Fashion** — Isolate models and clothing on transparent backgrounds
 
-- **E-commerce**: Product photo background removal
-- **Profile Pictures**: Automatic portrait cutouts
-- **Design Tools**: Quick image editing without Photoshop
-- **Marketing**: Create transparent assets for campaigns
-- **Real Estate**: Property photo editing
-- **Fashion**: Model/clothing isolation
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -108,21 +111,22 @@ npm start
 
 > ⚠️ First run downloads the **RMBG-1.4 model** (~176MB) - this takes 2-3 minutes
 
-## 🔧 Technical Details
+## Technical Details
 
 ### Background Removal Model
 
-- **Model**: [briaai/RMBG-1.4](https://huggingface.co/briaai/RMBG-1.4)
-- **Task**: Image background removal / segmentation
-- **Library**: [Transformers.js](https://huggingface.co/docs/transformers.js) - Run **transformer models** in the browser
-- **Inference Backend**: WebGPU (falls back to WASM)
-- **Model Size**: ~176MB (cached in browser after first load)
-- **Speed**: ~2-5 seconds per image (depends on resolution)
-- **Output**: PNG with transparency
+This example uses [RMBG-1.4](https://huggingface.co/briaai/RMBG-1.4) by BRIA AI, a state-of-the-art image segmentation model optimized for background removal. It runs in the browser via Transformers.js with WebGPU acceleration and an automatic WebAssembly fallback for broader browser support.
+
+- **Model**: [briaai/RMBG-1.4](https://huggingface.co/briaai/RMBG-1.4) — background removal / image segmentation
+- **Library**: [Transformers.js](https://huggingface.co/docs/transformers.js) — Run Hugging Face transformer models in the browser
+- **Inference backend**: WebGPU (automatic WASM fallback)
+- **Model size**: ~176MB (cached in browser after first download)
+- **Speed**: ~2-5 seconds per image (varies by resolution and GPU)
+- **Output**: PNG with alpha transparency
 
 ### Transformers.js Integration
 
-This example demonstrates **client-side transformer inference** using the **Transformers.js** library:
+This example demonstrates client-side transformer model inference using the Transformers.js library:
 
 ```javascript
 import { AutoModel, AutoProcessor, RawImage } from '@huggingface/transformers';
@@ -272,7 +276,7 @@ CMD ["node", "server.js"]
 - Very large images (>4K) may be slow
 - WebGPU not yet supported in Firefox (uses slower WASM)
 
-## 🎯 Potential Improvements
+## Potential Improvements
 
 - [ ] Add batch processing for multiple images
 - [ ] Support custom background colors/images
@@ -283,18 +287,14 @@ CMD ["node", "server.js"]
 - [ ] Try alternative models (U2-Net, MODNet)
 - [ ] Add WebWorker for non-blocking inference
 
-## 📚 Learn More
+## Related Resources
 
-- **[Transformers.js Documentation](https://huggingface.co/docs/transformers.js)** - Run AI models in the browser
-- **[Transformers.js GitHub](https://github.com/xenova/transformers.js)** - Source code and examples
-- **[RMBG-1.4 Model Card](https://huggingface.co/briaai/RMBG-1.4)** - Background removal model details
-- **[Backblaze B2 Documentation](https://www.backblaze.com/b2/docs/?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)** - Cloud storage API docs
-- **[B2 S3-Compatible API](https://www.backblaze.com/b2/docs/s3_compatible_api.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)** - S3 compatibility guide
-- **[WebGPU Guide](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API)** - Browser GPU acceleration
-
-## Keywords
-
-**Image Background Removal**, **Transformers.js**, **Browser-based Inference**, **Client-side AI**, **RMBG-1.4**, **MODNET**, **Image Segmentation**, **WebGPU**, **JavaScript AI**, **Machine Learning in Browser**, **Backblaze B2**, **S3-Compatible Storage**, **Pre-signed URLs**
+- **[Transformers.js Documentation](https://huggingface.co/docs/transformers.js)** — Run Hugging Face AI models in the browser with WebGPU and WebAssembly
+- **[Transformers.js GitHub](https://github.com/xenova/transformers.js)** — Source code and examples
+- **[RMBG-1.4 Model Card](https://huggingface.co/briaai/RMBG-1.4)** — Background removal image segmentation model by BRIA AI
+- **[Backblaze B2 Documentation](https://www.backblaze.com/b2/docs/?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)** — Cloud storage API docs
+- **[B2 S3-Compatible API](https://www.backblaze.com/b2/docs/s3_compatible_api.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)** — Use standard S3 SDKs with Backblaze B2
+- **[WebGPU API](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API)** — Browser GPU acceleration for ML inference
 
 ## Troubleshooting
 
