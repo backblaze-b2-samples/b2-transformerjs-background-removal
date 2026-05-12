@@ -4,6 +4,8 @@ A JavaScript example app that removes image backgrounds entirely in the browser 
 
 Upload a photo (JPG, PNG, WEBP, GIF, BMP), remove its background client-side with one click, and save both the original and the transparent cutout to S3-compatible Backblaze B2 object storage. Inference runs via WebGPU with an automatic WebAssembly (WASM) fallback.
 
+![Screenshot showing before/after background removal](docs/background-removal-example.png)
+
 ## Why Client-Side Background Removal?
 
 - **No GPU server costs** — the RMBG-1.4 model runs in your browser via WebGPU/WASM, so there's no inference server to pay for
@@ -24,8 +26,6 @@ Upload a photo (JPG, PNG, WEBP, GIF, BMP), remove its background client-side wit
 - **Cost-effective cloud storage**: Store original images and transparent PNG cutouts in Backblaze B2
 - **Secure direct uploads**: Browser-to-cloud uploads using S3 pre-signed URLs
 - **Simple architecture**: End-to-end flow from upload → remove background → store
-
-![Remove Background UI](./remove-background-ui.png)
 
 ## Architecture
 
