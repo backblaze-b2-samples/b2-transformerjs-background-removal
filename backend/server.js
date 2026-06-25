@@ -1,12 +1,13 @@
 import express from 'express';
 import cors from 'cors';
-import { S3Client, PutObjectCommand, GetObjectCommand, GetBucketCorsCommand, PutBucketCorsCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import dotenv from 'dotenv';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { setupCORS } from './setup-cors.js';
+import { createB2S3Client, getB2Config, getPublicObjectUrl } from './b2-config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,18 +21,19 @@ app.use(express.json());
 // Serve frontend files
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-const s3Client = new S3Client({
-  endpoint: process.env.B2_ENDPOINT,
-  region: process.env.B2_REGION || 'us-west-002',
-  credentials: {
-    accessKeyId: process.env.B2_KEY_ID,
-    secretAccessKey: process.env.B2_APP_KEY,
-  },
-  forcePathStyle: true,
-  customUserAgent: "b2ai-transformersjs",
-});
+let b2Config;
 
-const BUCKET = process.env.B2_BUCKET;
+try {
+  b2Config = getB2Config();
+} catch (error) {
+  console.error('❌ Missing required environment variables!');
+  console.error(error.message);
+  console.error('Copy .env.example to .env and fill in your B2 credentials.');
+  process.exit(1);
+}
+
+const s3Client = createB2S3Client(b2Config);
+const BUCKET = b2Config.bucketName;
 const URL_EXPIRY = 3600; // 1 hour
 const AUTO_SETUP_CORS = process.env.AUTO_SETUP_CORS !== 'false';
 
@@ -51,16 +53,9 @@ app.post('/api/presign-image', async (req, res) => {
 
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: URL_EXPIRY });
 
-    // Generate pre-signed GET URL for reading
-    const getCommand = new GetObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-    });
-    const publicUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: URL_EXPIRY });
-
     res.json({
       uploadUrl,
-      publicUrl,
+      publicUrl: getPublicObjectUrl(b2Config.publicUrlBase, key),
       key,
       fileId
     });
@@ -84,16 +79,9 @@ app.post('/api/presign-cutout', async (req, res) => {
 
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: URL_EXPIRY });
 
-    // Generate pre-signed GET URL for reading cutout
-    const getCommand = new GetObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-    });
-    const publicUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: URL_EXPIRY });
-
     res.json({
       uploadUrl,
-      publicUrl,
+      publicUrl: getPublicObjectUrl(b2Config.publicUrlBase, key),
       key
     });
   } catch (error) {
@@ -144,7 +132,7 @@ async function startServer() {
     console.log('\n📝 Next steps:');
     console.log('   1. Visit http://localhost:' + PORT);
     console.log('   2. Upload an image file');
-    console.log('   3. Click "Remove Background with MODNET"\n');
+    console.log('   3. Click "Remove Background with RMBG-1.4"\n');
     console.log('⚠️  IMPORTANT: Do NOT open index.html directly!');
     console.log('   Use the URL above to avoid CORS issues.\n');
   });

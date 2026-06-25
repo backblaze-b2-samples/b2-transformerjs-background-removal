@@ -1,5 +1,6 @@
-import { S3Client, PutBucketCorsCommand, GetBucketCorsCommand } from '@aws-sdk/client-s3';
+import { PutBucketCorsCommand, GetBucketCorsCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
+import { createB2S3Client, getB2Config } from './b2-config.js';
 
 dotenv.config();
 
@@ -16,26 +17,25 @@ const corsRules = {
 };
 
 export async function setupCORS(silent = false) {
-  // Validate environment variables
-  if (!process.env.B2_ENDPOINT || !process.env.B2_KEY_ID || !process.env.B2_APP_KEY || !process.env.B2_BUCKET) {
+  let b2Config;
+  let s3Client;
+
+  try {
+    b2Config = getB2Config();
+    s3Client = createB2S3Client(b2Config);
+  } catch (error) {
     console.error('❌ Missing required environment variables!');
-    console.error('Please set: B2_ENDPOINT, B2_KEY_ID, B2_APP_KEY, B2_BUCKET');
+    console.error(error.message);
     console.error('Copy .env.example to .env and fill in your B2 credentials.');
-    process.exit(1);
+
+    if (!silent) {
+      process.exit(1);
+    }
+
+    throw error;
   }
 
-  const s3Client = new S3Client({
-    endpoint: process.env.B2_ENDPOINT,
-    region: process.env.B2_REGION || 'us-west-002',
-    credentials: {
-      accessKeyId: process.env.B2_KEY_ID,
-      secretAccessKey: process.env.B2_APP_KEY,
-    },
-    forcePathStyle: true,
-    customUserAgent: "b2ai-transformersjs",
-  });
-
-  const BUCKET = process.env.B2_BUCKET;
+  const BUCKET = b2Config.bucketName;
 
   try {
     if (!silent) {
@@ -121,10 +121,10 @@ export async function setupCORS(silent = false) {
       console.error('\nTo fix:');
       console.error('1. Go to https://secure.backblaze.com/app_keys.htm');
       console.error('2. Create a new application key with all permissions above');
-      console.error('3. Update B2_KEY_ID and B2_APP_KEY in your .env file');
+      console.error('3. Update B2_APPLICATION_KEY_ID and B2_APPLICATION_KEY in your .env file');
     } else if (error.name === 'NoSuchBucket') {
       console.error(`\n⚠️  Bucket "${BUCKET}" not found!`);
-      console.error('Check that B2_BUCKET in .env matches your bucket name.');
+      console.error('Check that B2_BUCKET_NAME in .env matches your bucket name.');
     } else {
       console.error('\nFull error:', error);
     }

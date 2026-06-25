@@ -212,7 +212,7 @@
         <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin-bottom: 25px; border-radius: 5px;">
             <p style="margin: 0; line-height: 1.6; color: #555; font-size: 0.95em;">
                 <strong>🚀 What this demonstrates:</strong><br>
-                • <strong>Transformers.js</strong> - Run MODNET background removal AI entirely in your browser (no server GPU needed)<br>
+                • <strong>Transformers.js</strong> - Run RMBG-1.4 background removal AI entirely in your browser (no server GPU needed)<br>
                 • <strong>Client-side Inference</strong> - All AI processing happens locally in your browser for privacy<br>
                 • <strong>Backblaze B2</strong> - Cost-effective cloud storage at $6/TB/month with S3-compatible API<br>
                 • <strong>Pre-signed URLs</strong> - Secure direct browser-to-cloud uploads without exposing credentials<br>
@@ -229,7 +229,7 @@
         </div>
 
         <div style="text-align: center;">
-            <button id="removeBackgroundBtn" disabled>Remove Background with MODNET</button>
+            <button id="removeBackgroundBtn" disabled>Remove Background with RMBG-1.4</button>
         </div>
 
         <div class="status" id="status"></div>
@@ -257,7 +257,7 @@
                     <a id="cutoutLink" target="_blank" style="flex: 1; text-align: center;">✨ View Background-Removed Image</a>
                 </div>
                 <p style="margin-top: 10px; font-size: 0.85em; color: #999;">
-                    Click links above to access your files (pre-signed URLs valid for 1 hour)
+                    Click links above to access your files from your configured B2 public URL base
                 </p>
             </div>
         </div>
@@ -419,10 +419,10 @@
             try {
                 removeBackgroundBtn.disabled = true;
                 result.classList.remove('show');
-                showStatus('Loading MODNET model (first time may take a minute)...', 'info');
+                showStatus('Loading RMBG-1.4 model (first time may take a minute)...', 'info');
                 setProgress(60);
 
-                // Load MODNET model for background removal
+                // Load RMBG-1.4 model for background removal
                 if (!model) {
                     model = await AutoModel.from_pretrained('briaai/RMBG-1.4', {
                         device: 'webgpu',
@@ -431,7 +431,7 @@
                 }
 
                 setProgress(70);
-                showStatus('Processing image with MODNET (removing background)...', 'info');
+                showStatus('Processing image with RMBG-1.4 (removing background)...', 'info');
 
                 // Load and process image
                 const image = await RawImage.fromURL(originalImage.src);
