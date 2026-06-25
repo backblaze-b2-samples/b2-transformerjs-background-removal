@@ -290,6 +290,7 @@
         let model = null;
         let processor = null;
         let processedImageBlob = null;
+        let uploadRequestId = 0;
 
         const uploadZone = document.getElementById('uploadZone');
         const fileInput = document.getElementById('fileInput');
@@ -352,21 +353,32 @@
             }
 
             selectedFile = file;
+            uploadRequestId += 1;
+            const requestId = uploadRequestId;
+            originalImageUrl = null;
+            fileId = null;
+            uploadToken = null;
+            processedImageBlob = null;
+            removeBackgroundBtn.disabled = true;
+            result.classList.remove('show');
             showStatus(`Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'success');
 
             // Show preview
             const reader = new FileReader();
             reader.onload = (e) => {
-                originalImage.src = e.target.result;
+                if (requestId === uploadRequestId) {
+                    originalImage.src = e.target.result;
+                }
             };
             reader.readAsDataURL(file);
 
             // Upload to B2 immediately
-            await uploadToB2();
+            await uploadToB2(requestId);
         }
 
-        async function uploadToB2() {
+        async function uploadToB2(requestId) {
             try {
+                removeBackgroundBtn.disabled = true;
                 showStatus('Uploading image to B2...', 'info');
                 setProgress(10);
 
@@ -385,6 +397,10 @@
                 }
 
                 const { uploadUrl, publicUrl, fileId: id, uploadToken: token } = await response.json();
+                if (requestId !== uploadRequestId) {
+                    return;
+                }
+
                 fileId = id;
                 uploadToken = token;
 
@@ -399,6 +415,10 @@
                     body: selectedFile
                 });
 
+                if (requestId !== uploadRequestId) {
+                    return;
+                }
+
                 if (!uploadResponse.ok) {
                     throw new Error('Failed to upload image to B2');
                 }
@@ -410,6 +430,10 @@
                 removeBackgroundBtn.disabled = false;
 
             } catch (error) {
+                if (requestId !== uploadRequestId) {
+                    return;
+                }
+
                 console.error('Upload error:', error);
                 showStatus('Error uploading to B2: ' + error.message, 'error');
                 hideProgress();
