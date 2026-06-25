@@ -312,6 +312,13 @@
             gif: 'image/gif',
             bmp: 'image/bmp'
         };
+        const IMAGE_CONTENT_TYPE_ALIASES = {
+            'image/jpg': 'image/jpeg',
+            'image/pjpeg': 'image/jpeg',
+            'image/x-png': 'image/png',
+            'image/x-bmp': 'image/bmp',
+            'image/x-ms-bmp': 'image/bmp'
+        };
 
         function showStatus(message, type = 'info') {
             status.textContent = message;
@@ -333,8 +340,9 @@
 
         function getImageContentType(file) {
             const browserContentType = file.type.toLowerCase();
-            if (browserContentType.startsWith('image/')) {
-                return browserContentType;
+            const normalizedBrowserContentType = IMAGE_CONTENT_TYPE_ALIASES[browserContentType] || browserContentType;
+            if (normalizedBrowserContentType.startsWith('image/')) {
+                return normalizedBrowserContentType;
             }
 
             const extension = getImageExtension(file);
@@ -423,7 +431,13 @@
                     throw new Error('Failed to get pre-signed URL');
                 }
 
-                const { uploadUrl, publicUrl, fileId: id, uploadToken: token } = await response.json();
+                const {
+                    uploadUrl,
+                    publicUrl,
+                    fileId: id,
+                    uploadToken: token,
+                    contentType: presignedContentType
+                } = await response.json();
                 if (requestId !== uploadRequestId) {
                     return;
                 }
@@ -437,7 +451,7 @@
                 const uploadResponse = await fetch(uploadUrl, {
                     method: 'PUT',
                     headers: {
-                        "Content-Type": contentType
+                        "Content-Type": presignedContentType || contentType
                     },
                     body: selectedFile
                 });

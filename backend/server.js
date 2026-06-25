@@ -45,6 +45,13 @@ const SUPPORTED_IMAGE_CONTENT_TYPES = new Set([
   'image/gif',
   'image/bmp',
 ]);
+const IMAGE_CONTENT_TYPE_ALIASES = new Map([
+  ['image/jpg', 'image/jpeg'],
+  ['image/pjpeg', 'image/jpeg'],
+  ['image/x-png', 'image/png'],
+  ['image/x-bmp', 'image/bmp'],
+  ['image/x-ms-bmp', 'image/bmp'],
+]);
 
 function getRequestBody(req) {
   return req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
@@ -55,14 +62,19 @@ function getObjectKeyFromFilename(fileId, filename) {
   return `images/${fileId}.${extension}`;
 }
 
+function normalizeImageContentType(contentType) {
+  return IMAGE_CONTENT_TYPE_ALIASES.get(contentType) || contentType;
+}
+
 function validateImagePresignRequest(body) {
   if (typeof body.filename !== 'string' || body.filename.trim() === '') {
     return { ok: false, status: 400, message: 'Invalid filename' };
   }
 
-  const contentType = typeof body.contentType === 'string' && body.contentType.trim() !== ''
+  const requestedContentType = typeof body.contentType === 'string' && body.contentType.trim() !== ''
     ? body.contentType.trim().toLowerCase()
     : 'image/jpeg';
+  const contentType = normalizeImageContentType(requestedContentType);
 
   if (!SUPPORTED_IMAGE_CONTENT_TYPES.has(contentType)) {
     return { ok: false, status: 400, message: 'Invalid contentType' };
@@ -149,6 +161,7 @@ app.post('/api/presign-image', async (req, res) => {
       publicUrl,
       key,
       fileId,
+      contentType: validation.contentType,
       uploadToken: createUploadToken(fileId),
     });
   } catch (error) {
