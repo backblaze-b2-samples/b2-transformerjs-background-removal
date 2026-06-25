@@ -26,7 +26,7 @@ let b2Config;
 try {
   b2Config = getB2S3Config();
 } catch (error) {
-  console.error('❌ Missing required environment variables!');
+  console.error('❌ Missing or invalid B2 configuration!');
   console.error(error.message);
   console.error('Copy .env.example to .env and fill in your B2 credentials.');
   process.exit(1);
@@ -36,6 +36,7 @@ const s3Client = createB2S3Client(b2Config);
 const BUCKET = b2Config.bucketName;
 const URL_EXPIRY = 3600; // 1 hour
 const AUTO_SETUP_CORS = process.env.AUTO_SETUP_CORS !== 'false';
+const MAX_UPLOAD_TOKEN_LENGTH = 256;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getObjectKeyFromFilename(fileId, filename) {
@@ -67,7 +68,7 @@ function validateUploadToken(fileId, uploadToken) {
     return { ok: false, status: 400, message: 'Invalid fileId' };
   }
 
-  if (typeof uploadToken !== 'string') {
+  if (typeof uploadToken !== 'string' || uploadToken.length > MAX_UPLOAD_TOKEN_LENGTH) {
     return { ok: false, status: 403, message: 'Invalid upload token' };
   }
 
