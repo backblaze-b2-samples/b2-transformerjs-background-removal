@@ -1,11 +1,17 @@
 import { S3Client } from '@aws-sdk/client-s3';
 
 const B2_S3_ENDPOINT_HOST_PATTERN = /^s3\.([a-z0-9-]+)\.backblazeb2\.com$/i;
+const B2_REGION_PATTERN = /^[a-z]+(?:-[a-z]+)+-\d{3}$/;
 
 export const SAMPLE_USER_AGENT = 'b2ai-transformersjs (backblaze-b2-samples)';
 
+function readEnv(name) {
+  return Object.prototype.hasOwnProperty.call(process.env, name) ? process.env[name] : undefined;
+}
+
 function getEnvValue(name, legacyName) {
-  return process.env[name] || process.env[legacyName];
+  const value = readEnv(name);
+  return value === undefined ? readEnv(legacyName) : value;
 }
 
 function getRegionFromEndpoint(endpoint) {
@@ -26,7 +32,8 @@ export function getB2S3Config() {
   const applicationKeyId = getEnvValue('B2_APPLICATION_KEY_ID', 'B2_KEY_ID');
   const applicationKey = getEnvValue('B2_APPLICATION_KEY', 'B2_APP_KEY');
   const bucketName = getEnvValue('B2_BUCKET_NAME', 'B2_BUCKET');
-  const region = process.env.B2_REGION || getRegionFromEndpoint(process.env.B2_ENDPOINT);
+  const configuredRegion = readEnv('B2_REGION');
+  const region = configuredRegion === undefined ? getRegionFromEndpoint(readEnv('B2_ENDPOINT')) : configuredRegion;
 
   const missing = [];
   if (!applicationKeyId) missing.push('B2_APPLICATION_KEY_ID');
@@ -36,6 +43,10 @@ export function getB2S3Config() {
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+
+  if (!B2_REGION_PATTERN.test(region)) {
+    throw new Error(`Invalid environment variables: B2_REGION`);
   }
 
   return {

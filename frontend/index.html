@@ -394,8 +394,7 @@
                 const uploadResponse = await fetch(uploadUrl, {
                     method: 'PUT',
                     headers: {
-                        "Content-Type": selectedFile.type,
-                        "User-Agent": "b2ai-transformersjs",
+                        "Content-Type": selectedFile.type
                     },
                     body: selectedFile
                 });
@@ -496,8 +495,7 @@
                     method: 'PUT',
                     headers: {
                         "Content-Type": "image/png",
-                        "If-None-Match": "*",
-                        "User-Agent": "b2ai-transformersjs",
+                        "If-None-Match": "*"
                     },
                     body: processedImageBlob
                 });
