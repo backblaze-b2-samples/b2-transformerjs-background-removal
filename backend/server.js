@@ -38,10 +38,37 @@ const URL_EXPIRY = 3600; // 1 hour
 const AUTO_SETUP_CORS = process.env.AUTO_SETUP_CORS !== 'false';
 const MAX_UPLOAD_TOKEN_LENGTH = 256;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SUPPORTED_IMAGE_CONTENT_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+]);
+
+function getRequestBody(req) {
+  return req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+}
 
 function getObjectKeyFromFilename(fileId, filename) {
   const extension = path.extname(filename || '').slice(1).toLowerCase() || 'jpg';
   return `images/${fileId}.${extension}`;
+}
+
+function validateImagePresignRequest(body) {
+  if (typeof body.filename !== 'string' || body.filename.trim() === '') {
+    return { ok: false, status: 400, message: 'Invalid filename' };
+  }
+
+  const contentType = typeof body.contentType === 'string' && body.contentType.trim() !== ''
+    ? body.contentType.trim().toLowerCase()
+    : 'image/jpeg';
+
+  if (!SUPPORTED_IMAGE_CONTENT_TYPES.has(contentType)) {
+    return { ok: false, status: 400, message: 'Invalid contentType' };
+  }
+
+  return { ok: true, filename: body.filename.trim(), contentType };
 }
 
 function signUploadToken(fileId, expiresAt) {
@@ -99,14 +126,19 @@ async function getSignedReadUrl(key) {
 // Generate pre-signed PUT URL for image upload
 app.post('/api/presign-image', async (req, res) => {
   try {
-    const { filename, contentType } = req.body;
+    const validation = validateImagePresignRequest(getRequestBody(req));
+
+    if (!validation.ok) {
+      return res.status(validation.status).json({ error: validation.message });
+    }
+
     const fileId = randomUUID();
-    const key = getObjectKeyFromFilename(fileId, filename);
+    const key = getObjectKeyFromFilename(fileId, validation.filename);
 
     const command = new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
-      ContentType: contentType || 'image/jpeg',
+      ContentType: validation.contentType,
     });
 
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: URL_EXPIRY });
@@ -128,7 +160,7 @@ app.post('/api/presign-image', async (req, res) => {
 // Generate pre-signed PUT URL for cutout (background-removed) image upload
 app.post('/api/presign-cutout', async (req, res) => {
   try {
-    const { fileId, uploadToken } = req.body;
+    const { fileId, uploadToken } = getRequestBody(req);
     const tokenValidation = validateUploadToken(fileId, uploadToken);
 
     if (!tokenValidation.ok) {
