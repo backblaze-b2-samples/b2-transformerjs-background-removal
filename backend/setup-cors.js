@@ -1,6 +1,6 @@
 import { PutBucketCorsCommand, GetBucketCorsCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
-import { createB2S3Client, getB2Config } from './b2-config.js';
+import { createB2S3Client, getB2S3Config } from './b2-config.js';
 
 dotenv.config();
 
@@ -21,7 +21,7 @@ export async function setupCORS(silent = false) {
   let s3Client;
 
   try {
-    b2Config = getB2Config();
+    b2Config = getB2S3Config();
     s3Client = createB2S3Client(b2Config);
   } catch (error) {
     console.error('❌ Missing required environment variables!');

@@ -1,34 +1,55 @@
 import { S3Client } from '@aws-sdk/client-s3';
 
-const REQUIRED_ENV_VARS = [
-  'B2_APPLICATION_KEY_ID',
-  'B2_APPLICATION_KEY',
-  'B2_BUCKET_NAME',
-  'B2_REGION',
-  'B2_PUBLIC_URL_BASE',
-];
+const B2_S3_ENDPOINT_HOST_PATTERN = /^s3\.([a-z0-9-]+)\.backblazeb2\.com$/i;
 
 export const SAMPLE_USER_AGENT = 'b2ai-transformersjs (backblaze-b2-samples)';
 
-export function getB2Config() {
-  const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
+function getEnvValue(name, legacyName) {
+  return process.env[name] || process.env[legacyName];
+}
+
+function getRegionFromEndpoint(endpoint) {
+  if (!endpoint) {
+    return undefined;
+  }
+
+  try {
+    const { hostname } = new URL(endpoint);
+    const match = hostname.match(B2_S3_ENDPOINT_HOST_PATTERN);
+    return match?.[1];
+  } catch {
+    return undefined;
+  }
+}
+
+export function getB2S3Config() {
+  const applicationKeyId = getEnvValue('B2_APPLICATION_KEY_ID', 'B2_KEY_ID');
+  const applicationKey = getEnvValue('B2_APPLICATION_KEY', 'B2_APP_KEY');
+  const bucketName = getEnvValue('B2_BUCKET_NAME', 'B2_BUCKET');
+  const region = process.env.B2_REGION || getRegionFromEndpoint(process.env.B2_ENDPOINT);
+
+  const missing = [];
+  if (!applicationKeyId) missing.push('B2_APPLICATION_KEY_ID');
+  if (!applicationKey) missing.push('B2_APPLICATION_KEY');
+  if (!bucketName) missing.push('B2_BUCKET_NAME');
+  if (!region) missing.push('B2_REGION');
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
   return {
-    applicationKeyId: process.env.B2_APPLICATION_KEY_ID,
-    applicationKey: process.env.B2_APPLICATION_KEY,
-    bucketName: process.env.B2_BUCKET_NAME,
-    region: process.env.B2_REGION,
-    publicUrlBase: process.env.B2_PUBLIC_URL_BASE.replace(/\/+$/, ''),
+    applicationKeyId,
+    applicationKey,
+    bucketName,
+    region,
+    endpoint: `https://s3.${region}.backblazeb2.com`,
   };
 }
 
-export function createB2S3Client(config = getB2Config()) {
+export function createB2S3Client(config = getB2S3Config()) {
   return new S3Client({
-    endpoint: `https://s3.${config.region}.backblazeb2.com`,
+    endpoint: config.endpoint,
     region: config.region,
     credentials: {
       accessKeyId: config.applicationKeyId,
@@ -37,9 +58,4 @@ export function createB2S3Client(config = getB2Config()) {
     forcePathStyle: true,
     customUserAgent: SAMPLE_USER_AGENT,
   });
-}
-
-export function getPublicObjectUrl(publicUrlBase, key) {
-  const encodedKey = key.split('/').map(encodeURIComponent).join('/');
-  return `${publicUrlBase}/${encodedKey}`;
 }

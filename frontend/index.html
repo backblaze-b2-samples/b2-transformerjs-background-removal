@@ -257,7 +257,7 @@
                     <a id="cutoutLink" target="_blank" style="flex: 1; text-align: center;">✨ View Background-Removed Image</a>
                 </div>
                 <p style="margin-top: 10px; font-size: 0.85em; color: #999;">
-                    Click links above to access your files from your configured B2 public URL base
+                    Click links above to access your files (pre-signed URLs valid for 1 hour)
                 </p>
             </div>
         </div>
@@ -286,6 +286,7 @@
         let selectedFile = null;
         let originalImageUrl = null;
         let fileId = null;
+        let uploadToken = null;
         let model = null;
         let processor = null;
         let processedImageBlob = null;
@@ -383,8 +384,9 @@
                     throw new Error('Failed to get pre-signed URL');
                 }
 
-                const { uploadUrl, publicUrl, fileId: id } = await response.json();
+                const { uploadUrl, publicUrl, fileId: id, uploadToken: token } = await response.json();
                 fileId = id;
+                uploadToken = token;
 
                 setProgress(30);
 
@@ -480,7 +482,7 @@
                 const presignResponse = await fetch(`${API_BASE}/api/presign-cutout`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fileId })
+                    body: JSON.stringify({ fileId, uploadToken })
                 });
 
                 if (!presignResponse.ok) {
@@ -494,6 +496,7 @@
                     method: 'PUT',
                     headers: {
                         "Content-Type": "image/png",
+                        "If-None-Match": "*",
                         "User-Agent": "b2ai-transformersjs",
                     },
                     body: processedImageBlob

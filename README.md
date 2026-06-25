@@ -89,7 +89,17 @@ B2_REGION=your-bucket-region
 B2_PUBLIC_URL_BASE=https://f000.backblazeb2.com/file/your-bucket-name
 ```
 
-> Get your B2 region and public URL base from your [bucket details page](https://secure.backblaze.com/b2_buckets.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)
+> Get your B2 region from your [bucket details page](https://secure.backblaze.com/b2_buckets.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples). The app returns expiring signed read URLs by default; `B2_PUBLIC_URL_BASE` is kept for standardized sample configuration and is not required for default private-bucket reads.
+
+If you are migrating from the previous sample configuration, keep both old and new variables present during a rolling deploy, then remove the old names after every old process is drained:
+
+| Previous variable | New standardized variable |
+| --- | --- |
+| `B2_KEY_ID` | `B2_APPLICATION_KEY_ID` |
+| `B2_APP_KEY` | `B2_APPLICATION_KEY` |
+| `B2_BUCKET` | `B2_BUCKET_NAME` |
+| `B2_REGION` | `B2_REGION` |
+| `B2_ENDPOINT` | Derived from `B2_REGION` as `https://s3.<region>.backblazeb2.com` |
 
 ### 3. Start the App
 
@@ -214,9 +224,10 @@ Response:
 ```json
 {
   "uploadUrl": "https://...",
-  "publicUrl": "https://...",
+  "publicUrl": "https://...X-Amz-Expires=3600...",
   "key": "images/uuid.jpg",
-  "fileId": "uuid"
+  "fileId": "uuid",
+  "uploadToken": "server-issued-upload-proof"
 }
 ```
 
@@ -225,7 +236,8 @@ Response:
 Request:
 ```json
 {
-  "fileId": "uuid"
+  "fileId": "uuid",
+  "uploadToken": "server-issued-upload-proof"
 }
 ```
 
@@ -233,7 +245,7 @@ Response:
 ```json
 {
   "uploadUrl": "https://...",
-  "publicUrl": "https://...",
+  "publicUrl": "https://...X-Amz-Expires=3600...",
   "key": "cutouts/uuid_cutout.png"
 }
 ```
