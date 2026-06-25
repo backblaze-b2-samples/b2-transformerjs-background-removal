@@ -327,17 +327,21 @@
             progressContainer.style.display = 'none';
         }
 
+        function getImageExtension(file) {
+            return file.name.split('.').pop().toLowerCase();
+        }
+
         function getImageContentType(file) {
-            if (file.type) {
+            if (file.type.startsWith('image/')) {
                 return file.type;
             }
 
-            const extension = file.name.split('.').pop().toLowerCase();
+            const extension = getImageExtension(file);
             return IMAGE_CONTENT_TYPES[extension] || 'image/jpeg';
         }
 
         function isSupportedImageFile(file) {
-            return file.type.startsWith('image/') || Boolean(IMAGE_CONTENT_TYPES[file.name.split('.').pop().toLowerCase()]);
+            return file.type.startsWith('image/') || Boolean(IMAGE_CONTENT_TYPES[getImageExtension(file)]);
         }
 
         // File upload handling

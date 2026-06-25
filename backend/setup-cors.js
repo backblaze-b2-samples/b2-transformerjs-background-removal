@@ -24,11 +24,10 @@ export async function setupCORS(silent = false) {
     b2Config = getB2S3Config();
     s3Client = createB2S3Client(b2Config);
   } catch (error) {
-    console.error('❌ Missing or invalid B2 configuration!');
-    console.error(error.message);
-    console.error('Copy .env.example to .env and fill in your B2 credentials.');
-
     if (!silent) {
+      console.error('❌ Missing or invalid B2 configuration!');
+      console.error(error.message);
+      console.error('Copy .env.example to .env and fill in your B2 credentials.');
       process.exit(1);
     }
 
