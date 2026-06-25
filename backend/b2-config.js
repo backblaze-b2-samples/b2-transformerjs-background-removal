@@ -6,7 +6,7 @@ const B2_REGION_PATTERN = /^[a-z]+(?:-[a-z]+)+-\d{3}$/;
 export const SAMPLE_USER_AGENT = 'b2ai-transformersjs (backblaze-b2-samples)';
 
 function readEnv(name) {
-  return Object.prototype.hasOwnProperty.call(process.env, name) ? process.env[name] : undefined;
+  return Object.prototype.hasOwnProperty.call(process.env, name) ? process.env[name].trim() : undefined;
 }
 
 function getEnvValue(name, legacyName) {
