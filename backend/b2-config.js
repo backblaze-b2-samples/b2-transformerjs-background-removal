@@ -1,7 +1,7 @@
 import { S3Client } from '@aws-sdk/client-s3';
 
 const B2_S3_ENDPOINT_HOST_PATTERN = /^s3\.([a-z0-9-]+)\.backblazeb2\.com$/i;
-const B2_REGION_PATTERN = /^[a-z]+(?:-[a-z]+)+-\d{3}$/;
+const B2_REGION_PATTERN = /^[a-z]{2}(?:-[a-z]+)+-\d{3}$/;
 
 export const SAMPLE_USER_AGENT = 'b2ai-transformersjs (backblaze-b2-samples)';
 

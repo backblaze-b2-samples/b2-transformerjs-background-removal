@@ -84,6 +84,8 @@ function validateImagePresignRequest(body) {
 }
 
 function signUploadToken(fileId, expiresAt) {
+  // The B2 application key is the server-side HMAC secret; each token is scoped
+  // to one generated file id and the same one-hour lifetime as its presigned URL.
   return createHmac('sha256', b2Config.applicationKey)
     .update(`${fileId}.${expiresAt}`)
     .digest('base64url');

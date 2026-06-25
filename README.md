@@ -86,7 +86,9 @@ B2_APPLICATION_KEY_ID=your_application_key_id_here
 B2_APPLICATION_KEY=your_application_key_here
 B2_BUCKET_NAME=your-bucket-name
 B2_REGION=your-bucket-region
-B2_PUBLIC_URL_BASE=https://f000.backblazeb2.com/file/your-bucket-name
+# Optional: leave blank to use expiring signed read URLs.
+# B2_PUBLIC_URL_BASE=https://f000.backblazeb2.com/file/your-bucket-name
+B2_PUBLIC_URL_BASE=
 ```
 
 > Get your B2 region from your [bucket details page](https://secure.backblaze.com/b2_buckets.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples). The app returns expiring signed read URLs by default; `B2_PUBLIC_URL_BASE` is kept for standardized sample configuration and is not required for default private-bucket reads.
