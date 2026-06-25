@@ -304,6 +304,14 @@
 
         // API is served from same origin
         const API_BASE = window.location.origin;
+        const IMAGE_CONTENT_TYPES = {
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            png: 'image/png',
+            webp: 'image/webp',
+            gif: 'image/gif',
+            bmp: 'image/bmp'
+        };
 
         function showStatus(message, type = 'info') {
             status.textContent = message;
@@ -317,6 +325,19 @@
 
         function hideProgress() {
             progressContainer.style.display = 'none';
+        }
+
+        function getImageContentType(file) {
+            if (file.type) {
+                return file.type;
+            }
+
+            const extension = file.name.split('.').pop().toLowerCase();
+            return IMAGE_CONTENT_TYPES[extension] || 'image/jpeg';
+        }
+
+        function isSupportedImageFile(file) {
+            return file.type.startsWith('image/') || Boolean(IMAGE_CONTENT_TYPES[file.name.split('.').pop().toLowerCase()]);
         }
 
         // File upload handling
@@ -347,7 +368,7 @@
         });
 
         async function handleFileSelect(file) {
-            if (!file.type.startsWith('image/')) {
+            if (!isSupportedImageFile(file)) {
                 showStatus('Please select an image file', 'error');
                 return;
             }
@@ -378,6 +399,7 @@
 
         async function uploadToB2(requestId) {
             try {
+                const contentType = getImageContentType(selectedFile);
                 removeBackgroundBtn.disabled = true;
                 showStatus('Uploading image to B2...', 'info');
                 setProgress(10);
@@ -388,7 +410,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         filename: selectedFile.name,
-                        contentType: selectedFile.type
+                        contentType
                     })
                 });
 
@@ -410,7 +432,7 @@
                 const uploadResponse = await fetch(uploadUrl, {
                     method: 'PUT',
                     headers: {
-                        "Content-Type": selectedFile.type
+                        "Content-Type": contentType
                     },
                     body: selectedFile
                 });
