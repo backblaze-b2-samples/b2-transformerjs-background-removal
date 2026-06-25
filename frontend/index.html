@@ -332,8 +332,9 @@
         }
 
         function getImageContentType(file) {
-            if (file.type.startsWith('image/')) {
-                return file.type;
+            const browserContentType = file.type.toLowerCase();
+            if (browserContentType.startsWith('image/')) {
+                return browserContentType;
             }
 
             const extension = getImageExtension(file);
@@ -341,7 +342,7 @@
         }
 
         function isSupportedImageFile(file) {
-            return file.type.startsWith('image/') || Boolean(IMAGE_CONTENT_TYPES[getImageExtension(file)]);
+            return file.type.toLowerCase().startsWith('image/') || Boolean(IMAGE_CONTENT_TYPES[getImageExtension(file)]);
         }
 
         // File upload handling
