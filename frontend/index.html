@@ -212,7 +212,7 @@
         <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin-bottom: 25px; border-radius: 5px;">
             <p style="margin: 0; line-height: 1.6; color: #555; font-size: 0.95em;">
                 <strong>🚀 What this demonstrates:</strong><br>
-                • <strong>Transformers.js</strong> - Run MODNET background removal AI entirely in your browser (no server GPU needed)<br>
+                • <strong>Transformers.js</strong> - Run RMBG-1.4 background removal AI entirely in your browser (no server GPU needed)<br>
                 • <strong>Client-side Inference</strong> - All AI processing happens locally in your browser for privacy<br>
                 • <strong>Backblaze B2</strong> - Cost-effective cloud storage at $6/TB/month with S3-compatible API<br>
                 • <strong>Pre-signed URLs</strong> - Secure direct browser-to-cloud uploads without exposing credentials<br>
@@ -229,7 +229,7 @@
         </div>
 
         <div style="text-align: center;">
-            <button id="removeBackgroundBtn" disabled>Remove Background with MODNET</button>
+            <button id="removeBackgroundBtn" disabled>Remove Background with RMBG-1.4</button>
         </div>
 
         <div class="status" id="status"></div>
@@ -286,9 +286,11 @@
         let selectedFile = null;
         let originalImageUrl = null;
         let fileId = null;
+        let uploadToken = null;
         let model = null;
         let processor = null;
         let processedImageBlob = null;
+        let uploadRequestId = 0;
 
         const uploadZone = document.getElementById('uploadZone');
         const fileInput = document.getElementById('fileInput');
@@ -302,6 +304,21 @@
 
         // API is served from same origin
         const API_BASE = window.location.origin;
+        const IMAGE_CONTENT_TYPES = {
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            png: 'image/png',
+            webp: 'image/webp',
+            gif: 'image/gif',
+            bmp: 'image/bmp'
+        };
+        const IMAGE_CONTENT_TYPE_ALIASES = {
+            'image/jpg': 'image/jpeg',
+            'image/pjpeg': 'image/jpeg',
+            'image/x-png': 'image/png',
+            'image/x-bmp': 'image/bmp',
+            'image/x-ms-bmp': 'image/bmp'
+        };
 
         function showStatus(message, type = 'info') {
             status.textContent = message;
@@ -315,6 +332,25 @@
 
         function hideProgress() {
             progressContainer.style.display = 'none';
+        }
+
+        function getImageExtension(file) {
+            return file.name.split('.').pop().toLowerCase();
+        }
+
+        function getImageContentType(file) {
+            const browserContentType = file.type.toLowerCase();
+            const normalizedBrowserContentType = IMAGE_CONTENT_TYPE_ALIASES[browserContentType] || browserContentType;
+            if (normalizedBrowserContentType.startsWith('image/')) {
+                return normalizedBrowserContentType;
+            }
+
+            const extension = getImageExtension(file);
+            return IMAGE_CONTENT_TYPES[extension] || 'image/jpeg';
+        }
+
+        function isSupportedImageFile(file) {
+            return file.type.toLowerCase().startsWith('image/') || Boolean(IMAGE_CONTENT_TYPES[getImageExtension(file)]);
         }
 
         // File upload handling
@@ -345,27 +381,39 @@
         });
 
         async function handleFileSelect(file) {
-            if (!file.type.startsWith('image/')) {
+            if (!isSupportedImageFile(file)) {
                 showStatus('Please select an image file', 'error');
                 return;
             }
 
             selectedFile = file;
+            uploadRequestId += 1;
+            const requestId = uploadRequestId;
+            originalImageUrl = null;
+            fileId = null;
+            uploadToken = null;
+            processedImageBlob = null;
+            removeBackgroundBtn.disabled = true;
+            result.classList.remove('show');
             showStatus(`Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, 'success');
 
             // Show preview
             const reader = new FileReader();
             reader.onload = (e) => {
-                originalImage.src = e.target.result;
+                if (requestId === uploadRequestId) {
+                    originalImage.src = e.target.result;
+                }
             };
             reader.readAsDataURL(file);
 
             // Upload to B2 immediately
-            await uploadToB2();
+            await uploadToB2(requestId);
         }
 
-        async function uploadToB2() {
+        async function uploadToB2(requestId) {
             try {
+                const contentType = getImageContentType(selectedFile);
+                removeBackgroundBtn.disabled = true;
                 showStatus('Uploading image to B2...', 'info');
                 setProgress(10);
 
@@ -375,7 +423,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         filename: selectedFile.name,
-                        contentType: selectedFile.type
+                        contentType
                     })
                 });
 
@@ -383,8 +431,19 @@
                     throw new Error('Failed to get pre-signed URL');
                 }
 
-                const { uploadUrl, publicUrl, fileId: id } = await response.json();
+                const {
+                    uploadUrl,
+                    publicUrl,
+                    fileId: id,
+                    uploadToken: token,
+                    contentType: presignedContentType
+                } = await response.json();
+                if (requestId !== uploadRequestId) {
+                    return;
+                }
+
                 fileId = id;
+                uploadToken = token;
 
                 setProgress(30);
 
@@ -392,11 +451,14 @@
                 const uploadResponse = await fetch(uploadUrl, {
                     method: 'PUT',
                     headers: {
-                        "Content-Type": selectedFile.type,
-                        "User-Agent": "b2ai-transformersjs",
+                        "Content-Type": presignedContentType || contentType
                     },
                     body: selectedFile
                 });
+
+                if (requestId !== uploadRequestId) {
+                    return;
+                }
 
                 if (!uploadResponse.ok) {
                     throw new Error('Failed to upload image to B2');
@@ -409,6 +471,10 @@
                 removeBackgroundBtn.disabled = false;
 
             } catch (error) {
+                if (requestId !== uploadRequestId) {
+                    return;
+                }
+
                 console.error('Upload error:', error);
                 showStatus('Error uploading to B2: ' + error.message, 'error');
                 hideProgress();
@@ -419,10 +485,10 @@
             try {
                 removeBackgroundBtn.disabled = true;
                 result.classList.remove('show');
-                showStatus('Loading MODNET model (first time may take a minute)...', 'info');
+                showStatus('Loading RMBG-1.4 model (first time may take a minute)...', 'info');
                 setProgress(60);
 
-                // Load MODNET model for background removal
+                // Load RMBG-1.4 model for background removal
                 if (!model) {
                     model = await AutoModel.from_pretrained('briaai/RMBG-1.4', {
                         device: 'webgpu',
@@ -431,7 +497,7 @@
                 }
 
                 setProgress(70);
-                showStatus('Processing image with MODNET (removing background)...', 'info');
+                showStatus('Processing image with RMBG-1.4 (removing background)...', 'info');
 
                 // Load and process image
                 const image = await RawImage.fromURL(originalImage.src);
@@ -480,7 +546,7 @@
                 const presignResponse = await fetch(`${API_BASE}/api/presign-cutout`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fileId })
+                    body: JSON.stringify({ fileId, uploadToken })
                 });
 
                 if (!presignResponse.ok) {
@@ -494,7 +560,7 @@
                     method: 'PUT',
                     headers: {
                         "Content-Type": "image/png",
-                        "User-Agent": "b2ai-transformersjs",
+                        "If-None-Match": "*"
                     },
                     body: processedImageBlob
                 });

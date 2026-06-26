@@ -1,12 +1,13 @@
 import express from 'express';
 import cors from 'cors';
-import { S3Client, PutObjectCommand, GetObjectCommand, GetBucketCorsCommand, PutBucketCorsCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import dotenv from 'dotenv';
-import { randomUUID } from 'crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { setupCORS } from './setup-cors.js';
+import { createB2S3Client, getB2S3Config } from './b2-config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,49 +21,150 @@ app.use(express.json());
 // Serve frontend files
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-const s3Client = new S3Client({
-  endpoint: process.env.B2_ENDPOINT,
-  region: process.env.B2_REGION || 'us-west-002',
-  credentials: {
-    accessKeyId: process.env.B2_KEY_ID,
-    secretAccessKey: process.env.B2_APP_KEY,
-  },
-  forcePathStyle: true,
-  customUserAgent: "b2ai-transformersjs",
-});
+let b2Config;
 
-const BUCKET = process.env.B2_BUCKET;
+try {
+  b2Config = getB2S3Config();
+} catch (error) {
+  console.error('❌ Missing or invalid B2 configuration!');
+  console.error(error.message);
+  console.error('Copy .env.example to .env and fill in your B2 credentials.');
+  process.exit(1);
+}
+
+const s3Client = createB2S3Client(b2Config);
+const BUCKET = b2Config.bucketName;
 const URL_EXPIRY = 3600; // 1 hour
 const AUTO_SETUP_CORS = process.env.AUTO_SETUP_CORS !== 'false';
+const MAX_UPLOAD_TOKEN_LENGTH = 256;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SUPPORTED_IMAGE_CONTENT_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+]);
+const IMAGE_CONTENT_TYPE_ALIASES = new Map([
+  ['image/jpg', 'image/jpeg'],
+  ['image/pjpeg', 'image/jpeg'],
+  ['image/x-png', 'image/png'],
+  ['image/x-bmp', 'image/bmp'],
+  ['image/x-ms-bmp', 'image/bmp'],
+]);
+
+function getRequestBody(req) {
+  return req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+}
+
+function getObjectKeyFromFilename(fileId, filename) {
+  const extension = path.extname(filename || '').slice(1).toLowerCase() || 'jpg';
+  return `images/${fileId}.${extension}`;
+}
+
+function normalizeImageContentType(contentType) {
+  return IMAGE_CONTENT_TYPE_ALIASES.get(contentType) || contentType;
+}
+
+function validateImagePresignRequest(body) {
+  if (typeof body.filename !== 'string' || body.filename.trim() === '') {
+    return { ok: false, status: 400, message: 'Invalid filename' };
+  }
+
+  const requestedContentType = typeof body.contentType === 'string' && body.contentType.trim() !== ''
+    ? body.contentType.trim().toLowerCase()
+    : 'image/jpeg';
+  const contentType = normalizeImageContentType(requestedContentType);
+
+  if (!SUPPORTED_IMAGE_CONTENT_TYPES.has(contentType)) {
+    return { ok: false, status: 400, message: 'Invalid contentType' };
+  }
+
+  return { ok: true, filename: body.filename.trim(), contentType };
+}
+
+function signUploadToken(fileId, expiresAt) {
+  // The B2 application key is the server-side HMAC secret; each token is scoped
+  // to one generated file id and the same one-hour lifetime as its presigned URL.
+  return createHmac('sha256', b2Config.applicationKey)
+    .update(`${fileId}.${expiresAt}`)
+    .digest('base64url');
+}
+
+function createUploadToken(fileId) {
+  const expiresAt = Date.now() + URL_EXPIRY * 1000;
+  const signature = signUploadToken(fileId, expiresAt);
+  return `${fileId}.${expiresAt}.${signature}`;
+}
+
+function isTimingSafeEqual(left, right) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function validateUploadToken(fileId, uploadToken) {
+  if (!UUID_PATTERN.test(fileId || '')) {
+    return { ok: false, status: 400, message: 'Invalid fileId' };
+  }
+
+  if (typeof uploadToken !== 'string' || uploadToken.length > MAX_UPLOAD_TOKEN_LENGTH) {
+    return { ok: false, status: 403, message: 'Invalid upload token' };
+  }
+
+  const [tokenFileId, expiresAt, signature, extra] = uploadToken.split('.');
+  const expiresAtMs = Number(expiresAt);
+
+  if (extra || tokenFileId !== fileId || !Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
+    return { ok: false, status: 403, message: 'Invalid upload token' };
+  }
+
+  const expectedSignature = signUploadToken(fileId, expiresAt);
+  if (!isTimingSafeEqual(signature || '', expectedSignature)) {
+    return { ok: false, status: 403, message: 'Invalid upload token' };
+  }
+
+  return { ok: true };
+}
+
+async function getSignedReadUrl(key) {
+  const command = new GetObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+  });
+
+  return getSignedUrl(s3Client, command, { expiresIn: URL_EXPIRY });
+}
 
 // Generate pre-signed PUT URL for image upload
 app.post('/api/presign-image', async (req, res) => {
   try {
-    const { filename, contentType } = req.body;
+    const validation = validateImagePresignRequest(getRequestBody(req));
+
+    if (!validation.ok) {
+      return res.status(validation.status).json({ error: validation.message });
+    }
+
     const fileId = randomUUID();
-    const extension = filename.split('.').pop();
-    const key = `images/${fileId}.${extension}`;
+    const key = getObjectKeyFromFilename(fileId, validation.filename);
 
     const command = new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
-      ContentType: contentType || 'image/jpeg',
+      ContentType: validation.contentType,
     });
 
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: URL_EXPIRY });
-
-    // Generate pre-signed GET URL for reading
-    const getCommand = new GetObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-    });
-    const publicUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: URL_EXPIRY });
+    const publicUrl = await getSignedReadUrl(key);
 
     res.json({
       uploadUrl,
       publicUrl,
       key,
-      fileId
+      fileId,
+      contentType: validation.contentType,
+      uploadToken: createUploadToken(fileId),
     });
   } catch (error) {
     console.error('Error generating image presigned URL:', error);
@@ -73,23 +175,24 @@ app.post('/api/presign-image', async (req, res) => {
 // Generate pre-signed PUT URL for cutout (background-removed) image upload
 app.post('/api/presign-cutout', async (req, res) => {
   try {
-    const { fileId } = req.body;
+    const { fileId, uploadToken } = getRequestBody(req);
+    const tokenValidation = validateUploadToken(fileId, uploadToken);
+
+    if (!tokenValidation.ok) {
+      return res.status(tokenValidation.status).json({ error: tokenValidation.message });
+    }
+
     const key = `cutouts/${fileId}_cutout.png`;
 
     const command = new PutObjectCommand({
       Bucket: BUCKET,
       Key: key,
       ContentType: 'image/png',
+      IfNoneMatch: '*',
     });
 
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: URL_EXPIRY });
-
-    // Generate pre-signed GET URL for reading cutout
-    const getCommand = new GetObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-    });
-    const publicUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: URL_EXPIRY });
+    const publicUrl = await getSignedReadUrl(key);
 
     res.json({
       uploadUrl,
@@ -144,7 +247,7 @@ async function startServer() {
     console.log('\n📝 Next steps:');
     console.log('   1. Visit http://localhost:' + PORT);
     console.log('   2. Upload an image file');
-    console.log('   3. Click "Remove Background with MODNET"\n');
+    console.log('   3. Click "Remove Background with RMBG-1.4"\n');
     console.log('⚠️  IMPORTANT: Do NOT open index.html directly!');
     console.log('   Use the URL above to avoid CORS issues.\n');
   });

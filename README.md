@@ -82,14 +82,26 @@ cp .env.example .env
 Edit `.env` with your [B2 credentials](https://www.backblaze.com/b2/docs/quick_account.html?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples):
 
 ```env
-B2_ENDPOINT=https://s3.us-west-002.backblazeb2.com
-B2_REGION=us-west-002
-B2_KEY_ID=your_key_id_here
-B2_APP_KEY=your_app_key_here
-B2_BUCKET=your-bucket-name
+B2_APPLICATION_KEY_ID=your_application_key_id_here
+B2_APPLICATION_KEY=your_application_key_here
+B2_BUCKET_NAME=your-bucket-name
+B2_REGION=your-bucket-region
+# Optional: leave blank to use expiring signed read URLs.
+# B2_PUBLIC_URL_BASE=https://f000.backblazeb2.com/file/your-bucket-name
+B2_PUBLIC_URL_BASE=
 ```
 
-> Get your B2 endpoint and region from your [bucket details page](https://secure.backblaze.com/b2_buckets.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples)
+> Get your B2 region from your [bucket details page](https://secure.backblaze.com/b2_buckets.htm?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=imagesamples). The app returns expiring signed read URLs by default; `B2_PUBLIC_URL_BASE` is kept for standardized sample configuration and is not required for default private-bucket reads.
+
+If you are migrating from the previous sample configuration, keep both old and new variables present during a rolling deploy, then remove the old names after every old process is drained:
+
+| Previous variable | New standardized variable |
+| --- | --- |
+| `B2_KEY_ID` | `B2_APPLICATION_KEY_ID` |
+| `B2_APP_KEY` | `B2_APPLICATION_KEY` |
+| `B2_BUCKET` | `B2_BUCKET_NAME` |
+| `B2_REGION` | `B2_REGION` |
+| `B2_ENDPOINT` | Derived from `B2_REGION` as `https://s3.<region>.backblazeb2.com` |
 
 ### 3. Start the App
 
@@ -106,7 +118,7 @@ npm start
 
 1. Open **http://localhost:3000** in your browser
 2. Upload an image file (JPG, PNG, WEBP)
-3. Click **"Remove Background with MODNET"**
+3. Click **"Remove Background with RMBG-1.4"**
 4. View before/after comparison and access files in B2
 
 > ⚠️ First run downloads the **RMBG-1.4 model** (~176MB) - this takes 2-3 minutes
@@ -214,9 +226,10 @@ Response:
 ```json
 {
   "uploadUrl": "https://...",
-  "publicUrl": "https://...",
+  "publicUrl": "https://...X-Amz-Expires=3600...",
   "key": "images/uuid.jpg",
-  "fileId": "uuid"
+  "fileId": "uuid",
+  "uploadToken": "server-issued-upload-proof"
 }
 ```
 
@@ -225,7 +238,8 @@ Response:
 Request:
 ```json
 {
-  "fileId": "uuid"
+  "fileId": "uuid",
+  "uploadToken": "server-issued-upload-proof"
 }
 ```
 
@@ -233,7 +247,7 @@ Response:
 ```json
 {
   "uploadUrl": "https://...",
-  "publicUrl": "https://...",
+  "publicUrl": "https://...X-Amz-Expires=3600...",
   "key": "cutouts/uuid_cutout.png"
 }
 ```
